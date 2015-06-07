@@ -11,7 +11,7 @@ A small command-line program to download lecture videos from nptel.ac.in
 * `pip -install -r "requirements.txt"`
 
 ##Usage
-* On the terminal or Command Prompt Type
+* On the terminal or Command Prompt Type :
   `python nptel-dl.py "url" "directory"`
 * Example : `python nptel-dl.py 'http://nptel.ac.in/courses/108103007/' 'D:\Tutorials'`
   
