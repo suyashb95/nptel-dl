@@ -23,8 +23,6 @@ A small command-line program to download lecture videos from nptel.ac.in
 * On the terminal or Command Prompt Type
    'python nptel-dl.py --url "url" --dir "directory" --mp4'
 * Example : python nptel-dl.py --url 'http://nptel.ac.in/courses/108103007/' --dir 'D:\Tutorials' --mp4
-
-
   
 ###Dependencies
 * BeautifulSoup - For HTML parsing
