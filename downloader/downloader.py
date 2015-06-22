@@ -5,9 +5,10 @@ from time import sleep
 
 class Downloader():
 	
-	def __init__(self,url = None,dirname = None):
-		self.url = url
-		self.dirname = dirname
+	def __init__(self,args = None):
+		self.url = args.url
+		self.dirname = args.dir
+		self.args = args
 		self.session = requests.Session()
 		self.session.mount("http://", requests.adapters.HTTPAdapter(max_retries=2))
 		self.session.mount("https://", requests.adapters.HTTPAdapter(max_retries=2))
@@ -39,7 +40,12 @@ class Downloader():
 			subsoup = BeautifulSoup(parser.unescape(response.text))
 			div = subsoup.findAll('div',{'id':'tab3','class':'tab_content'})
 			links = div[0].findAll('a')
-			dl_url = links[2]['href']
+			if self.args.mp4:
+				dl_url = links[0]['href']
+			elif self.args.	__getattribute__('3gp'):
+				dl_url = links[4]['href'] 
+			else:
+				dl_url = links[2]['href']
 			self.getFile(item.text + '.flv' ,dl_url)
 			
 	def progressBar(self,done,file_size):
