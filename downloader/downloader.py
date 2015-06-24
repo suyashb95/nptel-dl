@@ -34,6 +34,7 @@ class Downloader():
 			
 	def getVideos(self,soup,parser):
 		items = soup.findAll('a',{'class':'header','href':''})
+		print "%d lecture videos found." % (len(items))
 		for item in items:
 			url = 'http://nptel.ac.in' + item['onclick'].split('=')[1][1:-1]		
 			response = self.connectionHandler(url)
@@ -42,11 +43,14 @@ class Downloader():
 			links = div[0].findAll('a')
 			if self.args.mp4:
 				dl_url = links[0]['href']
+				format = '.mp4'
 			elif self.args.	__getattribute__('3gp'):
-				dl_url = links[4]['href'] 
+				dl_url = links[4]['href']
+				format = '.3gp' 
 			else:
 				dl_url = links[2]['href']
-			self.getFile(item.text + '.flv' ,dl_url)
+				format = '.flv'
+			self.getFile(item.text + format ,dl_url)
 			
 	def progressBar(self,done,file_size):
 		percentage = ((done/file_size)*100)
