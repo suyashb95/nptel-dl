@@ -2,6 +2,7 @@ import requests,os,sys,HTMLParser,re
 from bs4 import BeautifulSoup
 from contextlib import closing
 from time import sleep
+import socket
 
 class Downloader():
 	
@@ -18,18 +19,22 @@ class Downloader():
 			response = self.session.get(url,stream = stream,timeout = timeout)
 			assert response.status_code == 200
 			return response
-		except requests.exceptions.ConnectionError as error:
-			print error[0].reason.args[1]
-			if error[0].reason.args[1].errno == 11004:
-				print "Connection Error."
-				sys.exit(0) 
-			print "Network Error. Retrying in 15 seconds."
+		except requests.exceptions.ConnectionError:
+			print "Connection error. Retrying in 15 seconds."
 			sleep(15)
-			self.connectionHandler(url)
+			return self.connectionHandler(url,stream)
+		except TypeError:
+			print "Type error.Retrying in 15 seconds."
+			sleep(15)
+			return self.connectionHandler(url,stream)
 		except AssertionError:
-			print "Invalid URL"
+			print "Connection error or invalid URL."
 			sys.exit(0) 
+		except requests.exceptions.HTTPError:
+			print "Invalid URL."
+			return
 		except KeyboardInterrupt:
+			print "\nExiting."
 			sys.exit(0)
 			
 	def getVideos(self,soup,parser):
@@ -59,37 +64,61 @@ class Downloader():
 		sys.stdout.write('[' + '#'*int((percentage/5)) + ' '*int((100-percentage)/5) + '] ')
 		sys.stdout.write('%.2f' % percentage + ' %')
 				
-	def getFile(self,filename,link):
-		filename = re.sub('[\/:*"?<>|]','_',filename)
-		print "Connecting to stream..."
-		try:
-			with closing(self.connectionHandler(link,True,5)) as response:
-				print "Response: "+ str(response.status_code)		
-				file_size = float(response.headers['content-length'])	
-				if(os.path.isfile(filename)):
-					if os.path.getsize(filename) >= long(file_size):
-						print filename + " already exists, skipping."
+	def getFile(self,filename,link,silent = False):
+		if link is not None:
+			if silent:
+				try:
+					with closing(self.connectionHandler(link,True,5)) as response:
+						with open(filename,'wb') as file:
+							for chunk in response.iter_content(chunk_size=1024):
+								if chunk:
+									file.write(chunk)
+									file.flush()
+					return filename
+				except:
+					self.getFile(filename,link,True)			
+			print "\nConnecting to stream..."
+			try:
+				with closing(self.connectionHandler(link,True,5)) as response:
+					print "Response: "+ str(response.status_code)		
+					file_size = float(response.headers['content-length'])	
+					if(os.path.isfile(filename)):
+						if os.path.getsize(filename) >= long(file_size):
+							print filename + " already exists, skipping."
+							return filename
+						else:
+							print "Incomplete download, restarting."
+					print "File Size: " + '%.2f' % (file_size/(1000**2)) + ' MB'
+					print "Saving as: " + filename
+					done = 0
+					try:
+						with open(filename,'wb') as file:
+							for chunk in response.iter_content(chunk_size=1024):
+								if chunk:
+									file.write(chunk)
+									file.flush()
+									done += len(chunk)
+									self.progressBar(done,file_size)
+									
+						if os.path.getsize(filename) < long(file_size):
+							print "\nConnection error. Restarting in 15 seconds."
+							sleep(15)
+							return self.getFile(filename,link,silent)
+						print "\nDownload complete."
 						return filename
-					else:
-						print "Incomplete download, restarting."
-				print "File Size: " + '%.2f' % (file_size/(1000**2)) + ' MB'
-				print "Saving as: " + filename
-				done = 0
-				with open(filename,'wb') as file:
-					for chunk in response.iter_content(chunk_size=1024):
-						if chunk:
-							file.write(chunk)
-							file.flush()
-							done += len(chunk)
-							self.progressBar(done,file_size)
-				print "\nDownload complete."
-				return filename
-		except requests.exceptions.ConnectionError as error:
-			print "\nNetwork Error.Retrying in 15 seconds."
-			sleep(15)
-			self.getFile(filename,link)
+					except socket.error:
+						return self.getFile(filename,link,silent)
+					except requests.exceptions.ConnectionError:
+						return self.getFile(filename,link,silent)
+					except KeyboardInterrupt:
+						print "\nExiting."
+						sys.exit(0)
+			except KeyboardInterrupt:
+				print "\nExiting." 
+				sys.exit(0)
+		else:
+			return 
 			
-	
 	def Download(self):
 		if self.url is None:
 			print "No URL entered."
