@@ -101,8 +101,6 @@ class Downloader():
 									self.progressBar(done,file_size)
 									
 						if os.path.getsize(filename) < long(file_size):
-							print "\nConnection error. Restarting in 15 seconds."
-							sleep(15)
 							return self.getFile(filename,link,silent)
 						print "\nDownload complete."
 						return filename
