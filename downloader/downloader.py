@@ -19,23 +19,16 @@ class Downloader():
 			response = self.session.get(url,stream = stream,timeout = timeout)
 			assert response.status_code == 200
 			return response
-		except requests.exceptions.ConnectionError:
+		except (requests.exceptions.ConnectionError,
+				TypeError,
+				socket.error):
 			print "Connection error. Retrying in 15 seconds."
 			sleep(15)
 			return self.connectionHandler(url,stream)
-		except TypeError:
-			print "Type error.Retrying in 15 seconds."
-			sleep(15)
-			return self.connectionHandler(url,stream)
-		except AssertionError:
+		except (AssertionError,
+				requests.exceptions.HTTPError):
 			print "Connection error or invalid URL."
-			sys.exit(0) 
-		except requests.exceptions.HTTPError:
-			print "Invalid URL."
 			return
-		except KeyboardInterrupt:
-			print "\nExiting."
-			sys.exit(0)
 			
 	def getVideos(self,soup,parser):
 		items = soup.findAll('a',{'class':'header','href':''})
@@ -65,57 +58,54 @@ class Downloader():
 		sys.stdout.write('%.2f' % percentage + ' %')
 				
 	def getFile(self,filename,link,silent = False):
+		new_filename = re.sub('[\/:*"?<>|]','_',filename)
 		if link is not None:
 			if silent:
 				try:
 					with closing(self.connectionHandler(link,True,5)) as response:
-						with open(filename,'wb') as file:
+						with open(new_filename,'wb') as file:
 							for chunk in response.iter_content(chunk_size=1024):
 								if chunk:
 									file.write(chunk)
 									file.flush()
-					return filename
-				except:
-					self.getFile(filename,link,True)			
+					return new_filename
+				except (socket.error,
+						requests.exceptions.ConnectionError):
+					return self.getFile(filename,link,silent)
 			print "\nConnecting to stream..."
-			try:
-				with closing(self.connectionHandler(link,True,5)) as response:
-					print "Response: "+ str(response.status_code)		
-					file_size = float(response.headers['content-length'])	
-					if(os.path.isfile(filename)):
-						if os.path.getsize(filename) >= long(file_size):
-							print filename + " already exists, skipping."
-							return filename
-						else:
-							print "Incomplete download, restarting."
-					print "File Size: " + '%.2f' % (file_size/(1000**2)) + ' MB'
-					print "Saving as: " + filename
-					done = 0
-					try:
-						with open(filename,'wb') as file:
-							for chunk in response.iter_content(chunk_size=1024):
-								if chunk:
-									file.write(chunk)
-									file.flush()
-									done += len(chunk)
-									self.progressBar(done,file_size)
-									
-						if os.path.getsize(filename) < long(file_size):
-							return self.getFile(filename,link,silent)
-						print "\nDownload complete."
-						return filename
-					except socket.error:
+			with closing(self.connectionHandler(link,True,5)) as response:
+				print "Response: "+ str(response.status_code)		
+				file_size = float(response.headers['content-length'])	
+				if(os.path.isfile(new_filename)):
+					if os.path.getsize(new_filename) >= long(file_size):
+						print new_filename + " already exists, skipping."
+						return new_filename
+					else:
+						print "Incomplete download, restarting."
+				print "File Size: " + '%.2f' % (file_size/(1000**2)) + ' MB'
+				print "Saving as: " + new_filename
+				done = 0
+				try:
+					with open(new_filename,'wb') as file:
+						for chunk in response.iter_content(chunk_size=1024):
+							if chunk:
+								file.write(chunk)
+								file.flush()
+								done += len(chunk)
+								self.progressBar(done,file_size)
+								
+					if os.path.getsize(new_filename) < long(file_size):
+						print "\nConnection error. Restarting in 15 seconds."
+						sleep(15)
 						return self.getFile(filename,link,silent)
-					except requests.exceptions.ConnectionError:
-						return self.getFile(filename,link,silent)
-					except KeyboardInterrupt:
-						print "\nExiting."
-						sys.exit(0)
-			except KeyboardInterrupt:
-				print "\nExiting." 
-				sys.exit(0)
+					print "\nDownload complete."
+					return new_filename
+				except (socket.error,
+						requests.exceptions.ConnectionError):
+					return self.getFile(filename,link,silent)
 		else:
 			return 
+
 			
 	def Download(self):
 		if self.url is None:
