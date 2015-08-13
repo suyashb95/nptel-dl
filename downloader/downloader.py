@@ -13,6 +13,7 @@ class Downloader():
 		self.session = requests.Session()
 		self.session.mount("http://", requests.adapters.HTTPAdapter(max_retries=2))
 		self.session.mount("https://", requests.adapters.HTTPAdapter(max_retries=2))
+		self.completed = 0
 		
 	def connectionHandler(self,url,stream = False,timeout = 15):
 		try:
@@ -24,16 +25,19 @@ class Downloader():
 				socket.error):
 			print "Connection error. Retrying in 15 seconds."
 			sleep(15)
-			return self.connectionHandler(url,stream)
+			self.connectionHandler(url,stream)
 		except (AssertionError,
 				requests.exceptions.HTTPError):
 			print "Connection error or invalid URL."
 			return
+		except KeyboardInterrupt:
+			print "Exiting."
+			sys.exit(0)
 			
 	def getVideos(self,soup,parser):
 		items = soup.findAll('a',{'class':'header','href':''})
 		print "%d lecture videos found." % (len(items))
-		for item in items:
+		for index,item in enumerate(items):
 			url = 'http://nptel.ac.in' + item['onclick'].split('=')[1][1:-1]		
 			response = self.connectionHandler(url)
 			subsoup = BeautifulSoup(parser.unescape(response.text))
@@ -48,32 +52,33 @@ class Downloader():
 			else:
 				dl_url = links[2]['href']
 				format = '.flv'
+			if self.args.limit is not None:
+				if self.args.limit == self.completed:
+					break 
+			if self.args.include is not None:
+				if len(self.args.include) == self.completed:
+					break
+				elif index + 1 not in self.args.include:
+					continue
+			elif self.args.exclude is not None:
+				if index + 1 in self.args.exclude:
+					print "Skipping " + item.text
+					continue
 			self.getFile(item.text + format ,dl_url)
+			self.completed += 1
 			
 	def progressBar(self,done,file_size):
 		percentage = ((done/file_size)*100)
 		sys.stdout.flush()
 		sys.stdout.write('\r')	
-		sys.stdout.write('[' + '#'*int((percentage/5)) + ' '*int((100-percentage)/5) + '] ')
-		sys.stdout.write('%.2f' % percentage + ' %')
+		sys.stdout.write('[' + '#'*int((percentage/5)) + ' '*int((100-percentage)/5) + ']')
+		sys.stdout.write(' | %.2f' % percentage + ' %')
 				
-	def getFile(self,filename,link,silent = False):
+	def getFile(self,filename,link):
 		new_filename = re.sub('[\/:*"?<>|]','_',filename)
 		if link is not None:
-			if silent:
-				try:
-					with closing(self.connectionHandler(link,True,5)) as response:
-						with open(new_filename,'wb') as file:
-							for chunk in response.iter_content(chunk_size=1024):
-								if chunk:
-									file.write(chunk)
-									file.flush()
-					return new_filename
-				except (socket.error,
-						requests.exceptions.ConnectionError):
-					return self.getFile(filename,link,silent)
 			print "\nConnecting to stream..."
-			with closing(self.connectionHandler(link,True,5)) as response:
+			with closing(self.connectionHandler(link,True,15)) as response:
 				print "Response: "+ str(response.status_code)		
 				file_size = float(response.headers['content-length'])	
 				if(os.path.isfile(new_filename)):
@@ -92,17 +97,19 @@ class Downloader():
 								file.write(chunk)
 								file.flush()
 								done += len(chunk)
-								self.progressBar(done,file_size)
-								
+								self.progressBar(done,file_size)				
 					if os.path.getsize(new_filename) < long(file_size):
 						print "\nConnection error. Restarting in 15 seconds."
 						sleep(15)
-						return self.getFile(filename,link,silent)
+						self.getFile(filename,link)
 					print "\nDownload complete."
 					return new_filename
 				except (socket.error,
 						requests.exceptions.ConnectionError):
-					return self.getFile(filename,link,silent)
+					self.getFile(filename,link)
+				except KeyboardInterrupt:
+					print "\nExiting."
+					sys.exit(0)
 		else:
 			return 
 
