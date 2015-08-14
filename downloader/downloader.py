@@ -38,9 +38,14 @@ class Downloader():
 		items = soup.findAll('a',{'class':'header','href':''})
 		print "%d lecture videos found." % (len(items))
 		for index,item in enumerate(items):
-			url = 'http://nptel.ac.in' + item['onclick'].split('=')[1][1:-1]		
-			response = self.connectionHandler(url)
-			subsoup = BeautifulSoup(parser.unescape(response.text))
+			url = 'http://nptel.ac.in' + item['onclick'].split('=')[1][1:-1]	
+			while(1):
+				try:	
+					response = self.connectionHandler(url)
+					subsoup = BeautifulSoup(parser.unescape(response.text))
+					break
+				except KeyboardInterrupt:
+					sys.exit(0)
 			div = subsoup.findAll('div',{'id':'tab3','class':'tab_content'})
 			links = div[0].findAll('a')
 			if self.args.mp4:
@@ -64,6 +69,7 @@ class Downloader():
 				if index + 1 in self.args.exclude:
 					print "Skipping " + item.text
 					continue
+			thread1.join()
 			self.getFile(item.text + format ,dl_url)
 			self.completed += 1
 			
@@ -78,38 +84,44 @@ class Downloader():
 		new_filename = re.sub('[\/:*"?<>|]','_',filename)
 		if link is not None:
 			print "\nConnecting to stream..."
-			with closing(self.connectionHandler(link,True,15)) as response:
-				print "Response: "+ str(response.status_code)		
-				file_size = float(response.headers['content-length'])	
-				if(os.path.isfile(new_filename)):
-					if os.path.getsize(new_filename) >= long(file_size):
-						print new_filename + " already exists, skipping."
+			try:
+				with closing(self.connectionHandler(link,True,5)) as response:
+					print "Response: "+ str(response.status_code)		
+					file_size = float(response.headers['content-length'])	
+					if(os.path.isfile(new_filename)):
+						if os.path.getsize(new_filename) >= long(file_size):
+							print new_filename + " already exists, skipping."
+							return new_filename
+						else:
+							print "Incomplete download, restarting."
+					print "Saving as: " + new_filename
+					print "File Size: " + '%.2f' % (file_size/(1000**2)) + ' MB'			
+					try:
+						done = 0
+						with open(new_filename,'wb') as file:
+							for chunk in response.iter_content(chunk_size=1024):
+								if chunk:
+									file.write(chunk)
+									file.flush()
+									done += len(chunk)
+									self.progressBar(done,file_size)
+						if os.path.getsize(new_filename) < long(file_size):
+							print "\nConnection error. Restarting in 15 seconds.LOL"
+							sleep(15)
+							self.getFile(filename,link,silent)
 						return new_filename
-					else:
-						print "Incomplete download, restarting."
-				print "File Size: " + '%.2f' % (file_size/(1000**2)) + ' MB'
-				print "Saving as: " + new_filename
-				done = 0
-				try:
-					with open(new_filename,'wb') as file:
-						for chunk in response.iter_content(chunk_size=1024):
-							if chunk:
-								file.write(chunk)
-								file.flush()
-								done += len(chunk)
-								self.progressBar(done,file_size)				
-					if os.path.getsize(new_filename) < long(file_size):
-						print "\nConnection error. Restarting in 15 seconds."
-						sleep(15)
-						self.getFile(filename,link)
-					print "\nDownload complete."
-					return new_filename
-				except (socket.error,
-						requests.exceptions.ConnectionError):
-					self.getFile(filename,link)
-				except KeyboardInterrupt:
-					print "\nExiting."
-					sys.exit(0)
+					except KeyboardInterrupt:
+						print "\nExiting."
+						sys.exit(0)
+					except (socket.error,
+							requests.exceptions.ConnectionError):
+						self.getFile(filename,link,silent)
+			except AttributeError:
+				self.getFile(filename,link,silent)
+			except KeyboardInterrupt:
+				os.remove(new_filename)
+				print "\nExiting." 
+				sys.exit(0)
 		else:
 			return 
 
