@@ -58,18 +58,24 @@ class Downloader():
 				dl_url = links[2]['href']
 				format = '.flv'
 			if self.args.limit is not None:
-				if self.args.limit == self.completed:
-					break 
+				if self.completed == self.args.limit:
+					return
 			if self.args.include is not None:
-				if len(self.args.include) == self.completed:
+				if self.completed == len(self.args.include):
 					break
-				elif index + 1 not in self.args.include:
-					continue
+				if(index + 1) not in self.args.include:
+					if self.args.range:
+						if not (self.args.range[0] <= (index + 1) <= self.args.range[1]):
+							continue
+					else:
+						continue
 			elif self.args.exclude is not None:
-				if index + 1 in self.args.exclude:
-					print "Skipping " + item.text
+				if (index + 1) in self.args.exclude:
+					print "Skipping " + str(track.title.encode('utf-8'))
 					continue
-			thread1.join()
+			if self.args.range is not None:
+				if not (self.args.range[0] <= (index + 1) <= self.args.range[1]):
+					continue
 			self.getFile(item.text + format ,dl_url)
 			self.completed += 1
 			

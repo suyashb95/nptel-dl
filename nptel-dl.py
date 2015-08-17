@@ -9,6 +9,7 @@ parser.add_argument('--3gp',action = 'store_true',help = 'Flag to download in 3G
 parser.add_argument('--exclude',nargs = '+',type = int, help = 'Enter track numbers to exclude.')
 parser.add_argument('--include',nargs = '+',type = int, help = 'Enter track numbers to include.')
 parser.add_argument('--limit',default = None,type = int,help = 'Maximum number of tracks to download.')
+parser.add_argument('--range',nargs = 2,type = int, help = 'Enter range of tracks to download.')
 
 if __name__ == '__main__':
 	args = parser.parse_args()

@@ -27,6 +27,7 @@ A small command-line program to download lecture videos from nptel.ac.in
       --exclude   exclude a specific list of videos.(list of space separated inteers)
       --include   Download a specific list of videos.(list of space separated integers)
       --limit     limit the number of videos.(Single integer)
+      --range     Range of videos to download.(Two space separated integers.)
   
 ###Dependencies
 * BeautifulSoup - For HTML parsing
