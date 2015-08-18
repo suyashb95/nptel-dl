@@ -73,9 +73,6 @@ class Downloader():
 				if (index + 1) in self.args.exclude:
 					print "Skipping " + str(track.title.encode('utf-8'))
 					continue
-			if self.args.range is not None:
-				if not (self.args.range[0] <= (index + 1) <= self.args.range[1]):
-					continue
 			self.getFile(item.text + format ,dl_url)
 			self.completed += 1
 			
