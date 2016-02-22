@@ -6,6 +6,7 @@ parser.add_argument('--url',default = None, type = str, help = 'The URL to downl
 parser.add_argument('--dir',default = os.getcwd(), type = str, help = 'The directory to save videos in. Default value is the current working directory.')
 parser.add_argument('--mp4',action = 'store_true',help = 'Flag to download in MP4 format.')
 parser.add_argument('--3gp',action = 'store_true',help = 'Flag to download in 3GP format.')
+parser.add_argument('--mp3',action = 'store_true',help = 'Flag to download in MP3 audio only.')
 parser.add_argument('--exclude',nargs = '+',type = int, help = 'Enter track numbers to exclude.')
 parser.add_argument('--include',nargs = '+',type = int, help = 'Enter track numbers to include.')
 parser.add_argument('--limit',default = None,type = int,help = 'Maximum number of tracks to download.')

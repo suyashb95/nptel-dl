@@ -34,7 +34,7 @@ class Downloader():
 			print "Exiting."
 			sys.exit(0)
 			
-	def getVideos(self,soup,parser):
+	def getVideos(self,soup):
 		items = soup.findAll('a',{'class':'header','href':''})
 		print "%d lecture videos found." % (len(items))
 		for index,item in enumerate(items):
@@ -42,20 +42,25 @@ class Downloader():
 			while(1):
 				try:	
 					response = self.connectionHandler(url)
-					subsoup = BeautifulSoup(parser.unescape(response.text))
+					subsoup = BeautifulSoup(response.text, 'html.parser')
 					break
 				except KeyboardInterrupt:
 					sys.exit(0)
-			div = subsoup.findAll('div',{'id':'tab3','class':'tab_content'})
-			links = div[0].findAll('a')
+			divs = subsoup.findAll('p',{'class':'format-label'})
+			links = []
+			for div in divs:
+				links.append(div.find('a')['href'])			
 			if self.args.mp4:
-				dl_url = links[0]['href']
+				dl_url = [url for url in links if url.endswith('.mp4')][0]
 				format = '.mp4'
 			elif self.args.	__getattribute__('3gp'):
-				dl_url = links[4]['href']
+				dl_url = [url for url in links if url.endswith('.3gp')][0]
 				format = '.3gp' 
+			elif self.args.	__getattribute__('mp3'):
+				dl_url = [url for url in links if url.endswith('.mp3')][0]
+				format = '.mp3' 
 			else:
-				dl_url = links[2]['href']
+				dl_url = [url for url in links if url.endswith('.flv')][0]
 				format = '.flv'
 			if self.args.limit is not None:
 				if self.completed == self.args.limit:
@@ -71,7 +76,7 @@ class Downloader():
 						continue
 			elif self.args.exclude is not None:
 				if (index + 1) in self.args.exclude:
-					print "Skipping " + str(track.title.encode('utf-8'))
+					print "Skipping " + item.text
 					continue
 			self.getFile(item.text + format ,dl_url)
 			self.completed += 1
@@ -111,16 +116,16 @@ class Downloader():
 						if os.path.getsize(new_filename) < long(file_size):
 							print "\nConnection error. Restarting in 15 seconds.LOL"
 							sleep(15)
-							self.getFile(filename,link,silent)
+							self.getFile(filename,link)
 						return new_filename
 					except KeyboardInterrupt:
 						print "\nExiting."
 						sys.exit(0)
 					except (socket.error,
 							requests.exceptions.ConnectionError):
-						self.getFile(filename,link,silent)
+						self.getFile(filename,link)
 			except AttributeError:
-				self.getFile(filename,link,silent)
+				self.getFile(filename,link)
 			except KeyboardInterrupt:
 				os.remove(new_filename)
 				print "\nExiting." 
@@ -145,10 +150,9 @@ class Downloader():
 			print "Invalid Directory"
 			return
 		print "Response: " + str(response.status_code)
-		parser = HTMLParser.HTMLParser()
-		soup = BeautifulSoup(parser.unescape(response.text))
+		soup = BeautifulSoup(response.text, 'html.parser')
 		folder = re.sub('[\/:*"?<>|]','_',soup.find('title').text)
 		if not os.path.isdir(folder):
 			os.mkdir(folder)
 		os.chdir(os.getcwd() + '\\' + str(folder))
-		self.getVideos(soup,parser)
+		self.getVideos(soup)
