@@ -19,11 +19,11 @@ if __name__ == '__main__':
 	if args.include is not None:
 		args.include = set(args.include)
 	if args.url == None:
-		print "No URL entered."
+		print ("No URL entered.")
 		sys.exit(0)
 	downloader = downloader.Downloader(args = args)
 	try:
 		downloader.Download()
 	except KeyboardInterrupt:
-		print "\nExiting."
+		print ("\nExiting.")
 		sys.exit(0)

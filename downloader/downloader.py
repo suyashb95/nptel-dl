@@ -1,4 +1,4 @@
-import requests,os,sys,HTMLParser,re
+import requests,os,sys,re
 from bs4 import BeautifulSoup
 from contextlib import closing
 from time import sleep
@@ -23,20 +23,20 @@ class Downloader():
 		except (requests.exceptions.ConnectionError,
 				TypeError,
 				socket.error):
-			print "Connection error. Retrying in 15 seconds."
+			print ("Connection error. Retrying in 15 seconds.")
 			sleep(15)
 			self.connectionHandler(url,stream)
 		except (AssertionError,
 				requests.exceptions.HTTPError):
-			print "Connection error or invalid URL."
+			print ("Connection error or invalid URL.")
 			return
 		except KeyboardInterrupt:
-			print "Exiting."
+			print ("Exiting.")
 			sys.exit(0)
 			
 	def getVideos(self,soup):
 		items = soup.findAll('a',{'class':'header','href':''})
-		print "%d lecture videos found." % (len(items))
+		print ("%d lecture videos found." % (len(items)))
 		for index,item in enumerate(items):
 			url = 'http://nptel.ac.in' + item['onclick'].split('=')[1][1:-1]	
 			while(1):
@@ -76,7 +76,7 @@ class Downloader():
 						continue
 			elif self.args.exclude is not None:
 				if (index + 1) in self.args.exclude:
-					print "Skipping " + item.text
+					print ("Skipping " + item.text)
 					continue
 			self.getFile(item.text + format ,dl_url)
 			self.completed += 1
@@ -91,19 +91,19 @@ class Downloader():
 	def getFile(self,filename,link):
 		new_filename = re.sub('[\/:*"?<>|]','_',filename)
 		if link is not None:
-			print "\nConnecting to stream..."
+			print ("\nConnecting to stream...")
 			try:
 				with closing(self.connectionHandler(link,True,5)) as response:
-					print "Response: "+ str(response.status_code)		
+					print ("Response: "+ str(response.status_code))		
 					file_size = float(response.headers['content-length'])	
 					if(os.path.isfile(new_filename)):
 						if os.path.getsize(new_filename) >= long(file_size):
-							print new_filename + " already exists, skipping."
+							print (new_filename + " already exists, skipping.")
 							return new_filename
 						else:
-							print "Incomplete download, restarting."
-					print "Saving as: " + new_filename
-					print "File Size: " + '%.2f' % (file_size/(1000**2)) + ' MB'			
+							print ("Incomplete download, restarting.")
+					print ("Saving as: " + new_filename)
+					print ("File Size: " + '%.2f' % (file_size/(1000**2)) + ' MB')			
 					try:
 						done = 0
 						with open(new_filename,'wb') as file:
@@ -114,12 +114,12 @@ class Downloader():
 									done += len(chunk)
 									self.progressBar(done,file_size)
 						if os.path.getsize(new_filename) < long(file_size):
-							print "\nConnection error. Restarting in 15 seconds.LOL"
+							print ("\nConnection error. Restarting in 15 seconds.LOL")
 							sleep(15)
 							self.getFile(filename,link)
 						return new_filename
 					except KeyboardInterrupt:
-						print "\nExiting."
+						print ("\nExiting.")
 						sys.exit(0)
 					except (socket.error,
 							requests.exceptions.ConnectionError):
@@ -128,7 +128,7 @@ class Downloader():
 				self.getFile(filename,link)
 			except KeyboardInterrupt:
 				os.remove(new_filename)
-				print "\nExiting." 
+				print ("\nExiting." )
 				sys.exit(0)
 		else:
 			return 
@@ -136,20 +136,21 @@ class Downloader():
 			
 	def Download(self):
 		if self.url is None:
-			print "No URL entered."
+			print ("No URL entered.")
 			return
 		elif 'nptel' not in self.url:
-			print "Invalid URL"
+			print ("Invalid URL")
 			return
 		try:
 			if self.dirname is not None:
 				os.chdir(str(self.dirname))
-			print "Connecting ... "
+			print ("Connecting ... ")
 			response = self.connectionHandler(self.url)
 		except WindowsError:
-			print "Invalid Directory"
-			return
-		print "Response: " + str(response.status_code)
+                        print(os.chdir(str(self.dirname)))
+                        print ("Invalid Directory")
+                        return
+		print ("Response: " + str(response.status_code))
 		soup = BeautifulSoup(response.text, 'html.parser')
 		folder = re.sub('[\/:*"?<>|]','_',soup.find('title').text)
 		if not os.path.isdir(folder):
